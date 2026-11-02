@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kosten-Tracker – Fixkosten & Abos</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#fff; --text:#1e2433; --muted:#6b7385; --line:#e3e7ef;
+    --primary:#4f6bed; --fix:#4f6bed; --abo:#e8578a; --ok:#2fa36b; --warn:#e6a23c;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text)}
+  header{background:linear-gradient(135deg,#4f6bed,#7b5be6);color:#fff;padding:22px 20px 60px}
+  header h1{margin:0;font-size:1.5rem}
+  header p{margin:4px 0 0;opacity:.85}
+  main{max-width:1100px;margin:-45px auto 40px;padding:0 16px}
+  .grid{display:grid;gap:16px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+  .card{background:var(--card);border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(30,36,51,.06)}
+  .kpi .label{color:var(--muted);font-size:.85rem}
+  .kpi .value{font-size:1.7rem;font-weight:700;margin-top:4px}
+  .kpi .sub{color:var(--muted);font-size:.8rem;margin-top:2px}
+  .tabs{display:flex;gap:8px;margin:20px 0 12px;flex-wrap:wrap}
+  .tab{border:none;background:#fff;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:600;color:var(--muted);box-shadow:0 1px 4px rgba(0,0,0,.05)}
+  .tab.active{background:var(--primary);color:#fff}
+  .hidden{display:none!important}
+  h2{font-size:1.1rem;margin:0 0 14px}
+  form .row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+  label{font-size:.8rem;color:var(--muted);display:block;margin-bottom:4px}
+  input,select{width:100%;padding:9px 10px;border:1px solid var(--line);border-radius:8px;font-size:.95rem;background:#fff}
+  button.btn{border:none;background:var(--primary);color:#fff;padding:10px 16px;border-radius:8px;font-weight:600;cursor:pointer}
+  button.btn.secondary{background:#eef1f8;color:var(--text)}
+  button.btn.danger{background:#fdecef;color:#c73a5b}
+  table{width:100%;border-collapse:collapse;font-size:.92rem}
+  th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.03em}
+  td.num,th.num{text-align:right;white-space:nowrap}
+  .pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.75rem;font-weight:600}
+  .pill.fix{background:#e8ecfd;color:var(--fix)}
+  .pill.abo{background:#fde8ef;color:var(--abo)}
+  .icon-btn{border:none;background:none;cursor:pointer;font-size:1rem;padding:4px}
+  .two{grid-template-columns:1fr 1fr}
+  @media(max-width:800px){.two{grid-template-columns:1fr}}
+  .bar-row{margin-bottom:10px}
+  .bar-head{display:flex;justify-content:space-between;font-size:.88rem;margin-bottom:4px}
+  .bar{height:10px;background:#eef1f8;border-radius:6px;overflow:hidden}
+  .bar>span{display:block;height:100%;border-radius:6px}
+  .banner{background:#fff7e6;border:1px solid #f5d699;color:#8a5a00;padding:12px 16px;border-radius:12px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+  .month-nav{display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+  .month-nav strong{font-size:1.15rem;min-width:170px;text-align:center}
+  .muted{color:var(--muted)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.85rem;margin-top:10px;justify-content:center}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+  .empty{text-align:center;color:var(--muted);padding:24px}
+  .summary-box{background:#f7f8fc;border-radius:10px;padding:14px;margin-top:12px;line-height:1.6}
+  .tag-yearly{font-size:.72rem;color:var(--warn);font-weight:600}
+  /* Monatlich Sparen */
+  #kpiTop{grid-template-columns:repeat(5,1fr)}
+  #kpiTop .kpi .value{font-size:1.5rem}
+  @media(max-width:1000px){#kpiTop{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:640px){#kpiTop{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:420px){#kpiTop{grid-template-columns:1fr}}
+  .kpi-link{cursor:pointer;transition:box-shadow .15s}
+  .kpi-link:hover{box-shadow:0 4px 16px rgba(47,163,107,.25)}
+  :root{--save:#2fa36b}
+  .goal{border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+  .goal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .goal-head h3{margin:0;font-size:1rem}
+  .goal-meta{font-size:.82rem;color:var(--muted);margin-top:8px;line-height:1.6}
+  .goal .bar{height:12px;margin-top:10px}
+  .goal.done{background:#f1faf5;border-color:#bfe5cf}
+  .flow{display:flex;flex-direction:column;gap:6px;font-size:.95rem}
+  .flow div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .flow div.total{border-bottom:none;border-top:2px solid var(--text);font-weight:700;padding-top:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>💶 Kosten-Tracker</h1>
+  <p>Fixkosten & Abos im Blick – mit Monatsübersicht</p>
+</header>
+
+<main>
+  <!-- KPIs -->
+  <div class="grid kpis" id="kpiTop">
+    <div class="card kpi"><div class="label">Ø Kosten pro Monat</div><div class="value" id="kpiMonth">0 €</div><div class="sub">alle Posten auf Monat umgerechnet</div></div>
+    <div class="card kpi"><div class="label">Hochgerechnet aufs Jahr</div><div class="value" id="kpiYear">0 €</div><div class="sub">Summe aller Zahlungen pro Jahr</div></div>
+    <div class="card kpi"><div class="label">Davon Fixkosten / Monat</div><div class="value" id="kpiFix" style="color:var(--fix)">0 €</div><div class="sub" id="kpiFixCount"></div></div>
+    <div class="card kpi"><div class="label">Davon Abos / Monat</div><div class="value" id="kpiAbo" style="color:var(--abo)">0 €</div><div class="sub" id="kpiAboCount"></div></div>
+    <div class="card kpi kpi-link" onclick="showTab('save')" title="Zum Reiter „Monatlich Sparen“"><div class="label">🐷 Sparen / Monat</div><div class="value" id="kpiSave" style="color:var(--save)">0 €</div><div class="sub">aufs Jahr: <b id="kpiSaveYear" style="color:var(--save)">0 €</b></div><div class="sub" id="kpiSaveSub"></div></div>
+  </div>
+
+  <div id="eomBanner" class="banner hidden">
+    <span>📅 <b>Der Monat ist bald vorbei!</b> Deine Monatsübersicht ist fertig.</span>
+    <button class="btn" onclick="showTab('report')">Übersicht ansehen</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="list" onclick="showTab('list')">📋 Meine Kosten</button>
+    <button class="tab" data-tab="report" onclick="showTab('report')">📊 Monatsübersicht</button>
+    <button class="tab" data-tab="save" onclick="showTab('save')">🐷 Monatlich Sparen</button>
+    <button class="tab" data-tab="data" onclick="showTab('data')">⚙️ Daten <span id="unsavedDot" class="hidden" title="Ungespeicherte Änderungen" style="color:#e6a23c">●</span></button>
+  </div>
+
+  <!-- TAB: Liste -->
+  <section id="tab-list">
+    <div class="card">
+      <h2 id="formTitle">➕ Neuen Posten hinzufügen</h2>
+      <form id="form">
+        <input type="hidden" id="editId">
+        <div class="row">
+          <div><label>Bezeichnung</label><input id="name" required placeholder="z. B. Netflix"></div>
+          <div><label>Art</label>
+            <select id="type" onchange="fillCategories()">
+              <option value="fix">Fixkosten</option>
+              <option value="abo">Abo</option>
+            </select></div>
+          <div><label>Kategorie</label><select id="category"></select></div>
+          <div><label>Betrag (€)</label><input id="amount" type="number" step="0.01" min="0" required placeholder="12,99"></div>
+          <div><label>Zahlungsrhythmus</label>
+            <select id="interval">
+              <option value="1">monatlich</option>
+              <option value="3">vierteljährlich</option>
+              <option value="6">halbjährlich</option>
+              <option value="12">jährlich</option>
+            </select></div>
+          <div><label>Erste Abbuchung (Monat)</label><input id="start" type="month" required></div>
+          <div><label>Abbuchung am (Tag)</label><input id="day" type="number" min="1" max="31" value="1"></div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button class="btn" type="submit" id="submitBtn">Hinzufügen</button>
+          <button class="btn secondary hidden" type="button" id="cancelBtn" onclick="resetForm()">Abbrechen</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+        <h2 style="margin:0">Alle Posten</h2>
+        <select id="filter" style="width:auto" onchange="render()">
+          <option value="all">Alle anzeigen</option>
+          <option value="fix">Nur Fixkosten</option>
+          <option value="abo">Nur Abos</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Bezeichnung</th><th>Art</th><th>Kategorie</th><th>Rhythmus</th><th class="num">Betrag</th><th class="num">Ø / Monat</th><th></th></tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB: Monatsübersicht -->
+  <section id="tab-report" class="hidden">
+    <div class="card">
+      <div class="month-nav">
+        <button class="btn secondary" onclick="shiftMonth(-1)">◀</button>
+        <strong id="monthLabel"></strong>
+        <button class="btn secondary" onclick="shiftMonth(1)">▶</button>
+        <button class="btn secondary" onclick="reportMonth=new Date();renderReport()">Heute</button>
+      </div>
+      <div class="grid kpis">
+        <div class="kpi"><div class="label">Tatsächlich abgebucht in diesem Monat</div><div class="value" id="rTotal">0 €</div></div>
+        <div class="kpi"><div class="label">Fixkosten</div><div class="value" id="rFix" style="color:var(--fix)">0 €</div></div>
+        <div class="kpi"><div class="label">Abos</div><div class="value" id="rAbo" style="color:var(--abo)">0 €</div></div>
+        <div class="kpi"><div class="label">Vergleich zum Ø-Monat</div><div class="value" id="rDiff">0 €</div></div>
+      </div>
+      <div class="summary-box" id="rSummary"></div>
+    </div>
+
+    <div class="grid two" style="margin-top:16px">
+      <div class="card">
+        <h2>Verteilung nach Kategorie</h2>
+        <canvas id="donut" width="300" height="300" style="display:block;margin:0 auto;max-width:100%"></canvas>
+        <div class="legend" id="legend"></div>
+      </div>
+      <div class="card">
+        <h2>Top-Kategorien</h2>
+        <div id="bars"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Abbuchungen im Monat (chronologisch)</h2>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Tag</th><th>Bezeichnung</th><th>Art</th><th>Kategorie</th><th class="num">Betrag</th></tr></thead>
+          <tbody id="rBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Jahresverlauf <span class="muted" id="yearLabel" style="font-weight:400"></span></h2>
+      <canvas id="yearChart" width="1000" height="260" style="width:100%;height:auto"></canvas>
+    </div>
+  </section>
+
+  <!-- TAB: Monatlich Sparen -->
+  <section id="tab-save" class="hidden">
+    <div class="grid two">
+      <div class="card">
+        <h2>💰 Einkommen & Spar-Budget</h2>
+        <div class="row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div><label>Netto-Einkommen pro Monat (€)</label><input id="sIncome" type="number" step="0.01" min="0" placeholder="z. B. 2500" oninput="updateSavingsSettings()"></div>
+          <div><label>Ziel-Sparquote (% vom Einkommen)</label><input id="sQuote" type="number" step="1" min="0" max="100" placeholder="z. B. 15" oninput="updateSavingsSettings()"></div>
+        </div>
+        <div class="flow" style="margin-top:16px" id="sFlow"></div>
+      </div>
+      <div class="card">
+        <h2>📈 Deine Sparbilanz</h2>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:16px">
+          <div class="kpi"><div class="label">Gespart pro Monat</div><div class="value" id="sMonthly" style="color:var(--save)">0 €</div><div class="sub" id="sMonthlySub"></div></div>
+          <div class="kpi"><div class="label">Sparquote</div><div class="value" id="sRate">–</div><div class="sub" id="sRateSub"></div></div>
+          <div class="kpi"><div class="label">Hochgerechnet aufs Jahr</div><div class="value" id="sYear">0 €</div><div class="sub">ohne Zinsen</div></div>
+          <div class="kpi"><div class="label">Bereits angespart (Ziele)</div><div class="value" id="sSaved">0 €</div><div class="sub" id="sSavedSub"></div></div>
+        </div>
+        <div class="summary-box" id="sHint"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2 id="gFormTitle">🎯 Neues Sparziel anlegen</h2>
+      <form id="goalForm">
+        <input type="hidden" id="gEditId">
+        <div class="row">
+          <div><label>Sparziel</label><input id="gName" required placeholder="z. B. Urlaub, Notgroschen"></div>
+          <div><label>Zielbetrag (€)</label><input id="gTarget" type="number" step="0.01" min="0" required placeholder="3000"></div>
+          <div><label>Bereits gespart (€)</label><input id="gSaved" type="number" step="0.01" min="0" value="0"></div>
+          <div><label>Monatliche Sparrate (€)</label><input id="gMonthly" type="number" step="0.01" min="0" placeholder="leer = aus Zieldatum berechnen"></div>
+          <div><label>Zieldatum (optional)</label><input id="gDate" type="month"></div>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px">
+          <button class="btn" type="submit" id="gSubmitBtn">Sparziel hinzufügen</button>
+          <button class="btn secondary hidden" type="button" id="gCancelBtn" onclick="resetGoalForm()">Abbrechen</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>Meine Sparziele</h2>
+      <div id="goalList"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h2>🧮 Sparrechner mit Zinseszins</h2>
+      <div class="row" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px">
+        <div><label>Monatliche Sparrate (€)</label><input id="cRate" type="number" step="1" min="0" oninput="renderCalc()"></div>
+        <div><label>Startkapital (€)</label><input id="cStart" type="number" step="1" min="0" value="0" oninput="renderCalc()"></div>
+        <div><label>Zinssatz p. a. (%)</label><input id="cInterest" type="number" step="0.1" min="0" value="3" oninput="renderCalc()"></div>
+        <div><label>Laufzeit (Jahre)</label><input id="cYears" type="number" step="1" min="1" max="50" value="10" oninput="renderCalc()"></div>
+      </div>
+      <div class="grid kpis" style="margin-top:16px">
+        <div class="kpi"><div class="label">Endkapital</div><div class="value" id="cEnd" style="color:var(--save)">0 €</div></div>
+        <div class="kpi"><div class="label">Eingezahlt</div><div class="value" id="cPaid">0 €</div></div>
+        <div class="kpi"><div class="label">Davon Zinsen</div><div class="value" id="cGain" style="color:var(--warn)">0 €</div></div>
+      </div>
+      <canvas id="calcChart" width="1000" height="260" style="width:100%;height:auto;margin-top:12px"></canvas>
+    </div>
+  </section>
+
+  <!-- TAB: Daten -->
+  <section id="tab-data" class="hidden">
+    <div class="card" style="margin-bottom:16px">
+      <h2>💾 Daten in der HTML-Datei speichern</h2>
+      <p class="muted">Speichert diese Seite <b>zusammen mit allen Daten</b> (Kosten, Einkommen, Sparziele) als HTML-Datei. Öffnest du die Datei woanders, z. B. auf einem anderen Gerät oder in einem anderen Browser, sind die Daten sofort da.<br>
+      In <b>Chrome/Edge</b> wählst du beim ersten Speichern die bisherige <code>kostentracker.html</code> zum Überschreiben aus. Danach speichert der Knopf bzw. <b>Strg+S</b> ohne Nachfrage in dieselbe Datei. In anderen Browsern wird die Datei heruntergeladen. Dann ersetzt du die alte Datei damit.</p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button class="btn" onclick="saveToHtml()">💾 In HTML-Datei speichern</button>
+        <span id="fileStatus" class="muted" style="font-size:.9rem"></span>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Daten sichern & laden</h2>
+      <p class="muted">Deine Daten werden lokal in diesem Browser gespeichert. Mit Export/Import kannst du sie sichern oder auf ein anderes Gerät übertragen.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="exportJSON()">⬇️ Export (JSON)</button>
+        <button class="btn" onclick="exportCSV()">⬇️ Export (CSV / Excel)</button>
+        <label class="btn secondary" style="margin:0;color:var(--text);font-size:.95rem;cursor:pointer;padding:10px 16px;border-radius:8px;background:#eef1f8;font-weight:600">
+          ⬆️ Import (JSON)<input type="file" accept=".json" style="display:none" onchange="importJSON(event)">
+        </label>
+        <button class="btn secondary" onclick="loadDemo()">🧪 Beispieldaten laden</button>
+        <button class="btn danger" onclick="clearAll()">🗑️ Alles löschen</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script id="embeddedData" type="application/json">null</script>
+<script>
+/* ---------- In HTML eingebettete Daten ---------- */
+// Quelltext der Seite merken (vor jeder Änderung am DOM), um ihn mit Daten neu zu speichern
+const SOURCE_HTML = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+const META_KEY = "kostentracker_meta";
+let meta = JSON.parse(localStorage.getItem(META_KEY) || "{}");
+(function loadEmbedded(){
+  let emb = null;
+  try{ emb = JSON.parse(document.getElementById("embeddedData").textContent); }catch(e){}
+  if(!emb || !Array.isArray(emb.items)) return;
+  const hasLocal = localStorage.getItem("kostentracker_v1") !== null;
+  // Datei-Daten verwenden, wenn im Browser nichts liegt oder die Datei neuer ist
+  if(!hasLocal || !meta.lastChange || emb.savedAt > meta.lastChange){
+    localStorage.setItem("kostentracker_v1", JSON.stringify(emb.items));
+    if(emb.savings) localStorage.setItem("kostentracker_sparen_v1", JSON.stringify(emb.savings));
+    meta = {lastChange: emb.savedAt, lastFileSave: emb.savedAt};
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+  }
+})();
+const touch = () => { meta.lastChange = Date.now(); localStorage.setItem(META_KEY, JSON.stringify(meta)); updateSaveStatus(); };
+
+/* ---------- Konfiguration ---------- */
+const CATEGORIES = {
+  fix: ["Wohnen & Miete","Versicherung","Bausparen & Sparen","Handy & Internet","Strom & Energie","Mobilität","Kredit","Sonstiges"],
+  abo: ["Streaming (Video)","Musik","Software & Cloud","Gaming","Fitness","Zeitschriften & News","Sonstiges"]
+};
+const COLORS = ["#4f6bed","#e8578a","#2fa36b","#e6a23c","#7b5be6","#16a3b8","#f06543","#8bc34a","#9c6644","#607d8b","#d81b60","#00897b","#5c6bc0","#fbc02d"];
+const INTERVAL_TXT = {1:"monatlich",3:"vierteljährlich",6:"halbjährlich",12:"jährlich"};
+const STORAGE_KEY = "kostentracker_v1";
+const eur = v => v.toLocaleString("de-DE",{style:"currency",currency:"EUR"});
+const MONTHS = ["Januar","Februar","März","April","Mai","Juni","Juli","August","September","Oktober","November","Dezember"];
+
+let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+let reportMonth = new Date();
+
+/* ---------- Helfer ---------- */
+const save = () => { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); touch(); };
+const monthly = it => it.amount / it.interval;
+const ym = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+// Wird der Posten im Monat (Jahr y, Monat m 0-11) abgebucht?
+function isDue(it, y, m){
+  const [sy, sm] = it.start.split("-").map(Number);
+  const diff = (y - sy) * 12 + (m - (sm - 1));
+  return diff >= 0 && diff % it.interval === 0;
+}
+function dueInMonth(y, m){ return items.filter(it => isDue(it, y, m)); }
+
+function demoData(){
+  const y = new Date().getFullYear();
+  return [
+    {name:"Bausparvertrag",type:"fix",category:"Bausparen & Sparen",amount:100,interval:1,start:`${y}-01`,day:1},
+    {name:"Haftpflichtversicherung",type:"fix",category:"Versicherung",amount:65,interval:12,start:`${y}-03`,day:15},
+    {name:"Hausratversicherung",type:"fix",category:"Versicherung",amount:9.5,interval:1,start:`${y}-01`,day:1},
+    {name:"KFZ-Versicherung",type:"fix",category:"Versicherung",amount:420,interval:12,start:`${y}-01`,day:1},
+    {name:"Handyvertrag",type:"fix",category:"Handy & Internet",amount:24.99,interval:1,start:`${y}-01`,day:5},
+    {name:"Internet",type:"fix",category:"Handy & Internet",amount:39.99,interval:1,start:`${y}-01`,day:3},
+    {name:"Strom",type:"fix",category:"Strom & Energie",amount:78,interval:1,start:`${y}-01`,day:28},
+    {name:"Deutschlandticket",type:"fix",category:"Mobilität",amount:58,interval:1,start:`${y}-01`,day:1},
+    {name:"Rundfunkbeitrag",type:"fix",category:"Sonstiges",amount:55.08,interval:3,start:`${y}-01`,day:15},
+    {name:"Netflix",type:"abo",category:"Streaming (Video)",amount:13.99,interval:1,start:`${y}-01`,day:12},
+    {name:"Disney+",type:"abo",category:"Streaming (Video)",amount:9.99,interval:1,start:`${y}-01`,day:20},
+    {name:"Spotify",type:"abo",category:"Musik",amount:10.99,interval:1,start:`${y}-01`,day:8},
+    {name:"Amazon Prime",type:"abo",category:"Streaming (Video)",amount:89.9,interval:12,start:`${y}-06`,day:10},
+    {name:"iCloud 200 GB",type:"abo",category:"Software & Cloud",amount:2.99,interval:1,start:`${y}-01`,day:18},
+    {name:"Fitnessstudio",type:"abo",category:"Fitness",amount:29.9,interval:1,start:`${y}-01`,day:1},
+  ].map((x,i) => ({...x, id: Date.now()+i}));
+}
+if(!items){ items = demoData(); save(); }
+
+/* ---------- Formular ---------- */
+function fillCategories(selected){
+  const t = document.getElementById("type").value;
+  document.getElementById("category").innerHTML = CATEGORIES[t].map(c => `<option ${c===selected?"selected":""}>${c}</option>`).join("");
+}
+function resetForm(){
+  document.getElementById("form").reset();
+  document.getElementById("editId").value = "";
+  document.getElementById("start").value = ym(new Date());
+  document.getElementById("day").value = 1;
+  document.getElementById("formTitle").textContent = "➕ Neuen Posten hinzufügen";
+  document.getElementById("submitBtn").textContent = "Hinzufügen";
+  document.getElementById("cancelBtn").classList.add("hidden");
+  fillCategories();
+}
+document.getElementById("form").addEventListener("submit", e => {
+  e.preventDefault();
+  const id = document.getElementById("editId").value;
+  const data = {
+    name: document.getElementById("name").value.trim(),
+    type: document.getElementById("type").value,
+    category: document.getElementById("category").value,
+    amount: parseFloat(document.getElementById("amount").value),
+    interval: parseInt(document.getElementById("interval").value),
+    start: document.getElementById("start").value,
+    day: Math.min(31, Math.max(1, parseInt(document.getElementById("day").value) || 1)),
+  };
+  if(id){ items = items.map(it => it.id == id ? {...it, ...data} : it); }
+  else { items.push({...data, id: Date.now()}); }
+  save(); resetForm(); render();
+});
+function editItem(id){
+  const it = items.find(x => x.id == id);
+  document.getElementById("editId").value = it.id;
+  document.getElementById("name").value = it.name;
+  document.getElementById("type").value = it.type;
+  fillCategories(it.category);
+  document.getElementById("amount").value = it.amount;
+  document.getElementById("interval").value = it.interval;
+  document.getElementById("start").value = it.start;
+  document.getElementById("day").value = it.day;
+  document.getElementById("formTitle").textContent = "✏️ Posten bearbeiten";
+  document.getElementById("submitBtn").textContent = "Speichern";
+  document.getElementById("cancelBtn").classList.remove("hidden");
+  window.scrollTo({top: document.getElementById("form").offsetTop - 80, behavior:"smooth"});
+}
+function deleteItem(id){
+  const it = items.find(x => x.id == id);
+  if(confirm(`„${it.name}“ wirklich löschen?`)){ items = items.filter(x => x.id != id); save(); render(); }
+}
+
+/* ---------- Rendering: Liste + KPIs ---------- */
+function render(){
+  const fix = items.filter(i => i.type==="fix"), abo = items.filter(i => i.type==="abo");
+  const sum = arr => arr.reduce((s,i) => s + monthly(i), 0);
+  document.getElementById("kpiMonth").textContent = eur(sum(items));
+  document.getElementById("kpiYear").textContent = eur(sum(items)*12);
+  document.getElementById("kpiFix").textContent = eur(sum(fix));
+  document.getElementById("kpiAbo").textContent = eur(sum(abo));
+  document.getElementById("kpiFixCount").textContent = `${fix.length} Posten`;
+  document.getElementById("kpiAboCount").textContent = `${abo.length} Abos`;
+
+  const f = document.getElementById("filter").value;
+  const list = items.filter(i => f==="all" || i.type===f).sort((a,b) => monthly(b)-monthly(a));
+  document.getElementById("tbody").innerHTML = list.length ? list.map(it => `
+    <tr>
+      <td><b>${esc(it.name)}</b></td>
+      <td><span class="pill ${it.type}">${it.type==="fix"?"Fixkosten":"Abo"}</span></td>
+      <td>${esc(it.category)}</td>
+      <td>${INTERVAL_TXT[it.interval]}</td>
+      <td class="num">${eur(it.amount)}</td>
+      <td class="num"><b>${eur(monthly(it))}</b></td>
+      <td class="num"><button class="icon-btn" title="Bearbeiten" onclick="editItem(${it.id})">✏️</button><button class="icon-btn" title="Löschen" onclick="deleteItem(${it.id})">🗑️</button></td>
+    </tr>`).join("") : `<tr><td colspan="7" class="empty">Noch keine Posten – leg oben los!</td></tr>`;
+
+  // Banner in den letzten 3 Tagen des Monats
+  const now = new Date(), last = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+  document.getElementById("eomBanner").classList.toggle("hidden", last - now.getDate() > 2);
+
+  renderReport();
+  renderSavings();
+}
+
+/* ---------- Rendering: Monatsübersicht ---------- */
+function shiftMonth(d){ reportMonth = new Date(reportMonth.getFullYear(), reportMonth.getMonth()+d, 1); renderReport(); }
+
+function renderReport(){
+  const y = reportMonth.getFullYear(), m = reportMonth.getMonth();
+  document.getElementById("monthLabel").textContent = `${MONTHS[m]} ${y}`;
+  const due = dueInMonth(y, m).sort((a,b) => a.day - b.day);
+  const total = due.reduce((s,i) => s+i.amount, 0);
+  const fix = due.filter(i => i.type==="fix").reduce((s,i) => s+i.amount, 0);
+  const abo = total - fix;
+  const avg = items.reduce((s,i) => s+monthly(i), 0);
+  const diff = total - avg;
+
+  document.getElementById("rTotal").textContent = eur(total);
+  document.getElementById("rFix").textContent = eur(fix);
+  document.getElementById("rAbo").textContent = eur(abo);
+  const dEl = document.getElementById("rDiff");
+  dEl.textContent = (diff>0?"+":"") + eur(diff);
+  dEl.style.color = diff > 0.005 ? "#c73a5b" : "var(--ok)";
+
+  // Kategorien
+  const cats = {};
+  due.forEach(i => cats[i.category] = (cats[i.category]||0) + i.amount);
+  const catArr = Object.entries(cats).sort((a,b) => b[1]-a[1]);
+
+  // Textzusammenfassung
+  const special = due.filter(i => i.interval > 1);
+  const biggest = due.slice().sort((a,b) => b.amount-a.amount)[0];
+  let txt = `<b>Zusammenfassung ${MONTHS[m]} ${y}:</b><br>`;
+  if(!due.length){ txt += "In diesem Monat fallen keine Kosten an."; }
+  else{
+    txt += `Es werden <b>${due.length} Zahlungen</b> über insgesamt <b>${eur(total)}</b> fällig – davon ${eur(fix)} Fixkosten (${Math.round(fix/total*100)} %) und ${eur(abo)} für Abos (${Math.round(abo/total*100)} %).<br>`;
+    txt += `Größter Einzelposten: <b>${esc(biggest.name)}</b> mit ${eur(biggest.amount)}. Teuerste Kategorie: <b>${esc(catArr[0][0])}</b> (${eur(catArr[0][1])}).<br>`;
+    if(special.length) txt += `⚠️ Diesen Monat zusätzlich fällig (nicht monatlich): ${special.map(i => `<b>${esc(i.name)}</b> (${eur(i.amount)})`).join(", ")}.<br>`;
+    txt += diff > 0.005 ? `Das sind <b>${eur(diff)} mehr</b> als in einem durchschnittlichen Monat.` :
+           diff < -0.005 ? `Das sind <b>${eur(-diff)} weniger</b> als in einem durchschnittlichen Monat. 👍` : `Das entspricht genau einem durchschnittlichen Monat.`;
+    const aboYear = items.filter(i => i.type==="abo").reduce((s,i)=>s+monthly(i),0)*12;
+    txt += `<br>💡 Deine Abos kosten dich hochgerechnet <b>${eur(aboYear)} pro Jahr</b>.`;
+  }
+  document.getElementById("rSummary").innerHTML = txt;
+
+  // Tabelle
+  document.getElementById("rBody").innerHTML = due.length ? due.map(it => `
+    <tr><td>${String(it.day).padStart(2,"0")}.${String(m+1).padStart(2,"0")}.</td>
+    <td><b>${esc(it.name)}</b> ${it.interval>1?`<span class="tag-yearly">${INTERVAL_TXT[it.interval]}</span>`:""}</td>
+    <td><span class="pill ${it.type}">${it.type==="fix"?"Fixkosten":"Abo"}</span></td>
+    <td>${esc(it.category)}</td><td class="num">${eur(it.amount)}</td></tr>`).join("") +
+    `<tr><td colspan="4"><b>Summe</b></td><td class="num"><b>${eur(total)}</b></td></tr>`
+    : `<tr><td colspan="5" class="empty">Keine Abbuchungen in diesem Monat.</td></tr>`;
+
+  drawDonut(catArr, total);
+  drawBars(catArr, total);
+  drawYear(y, m);
+}
+
+function drawDonut(catArr, total){
+  const c = document.getElementById("donut"), ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  const cx=150, cy=150, r=120, ir=72;
+  if(!total){ ctx.fillStyle="#eef1f8"; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.arc(cx,cy,ir,0,Math.PI*2,true); ctx.fill(); }
+  let a = -Math.PI/2;
+  catArr.forEach(([_,v],i) => {
+    const s = v/total*Math.PI*2;
+    ctx.fillStyle = COLORS[i%COLORS.length];
+    ctx.beginPath(); ctx.arc(cx,cy,r,a,a+s); ctx.arc(cx,cy,ir,a+s,a,true); ctx.closePath(); ctx.fill();
+    a += s;
+  });
+  ctx.fillStyle="#1e2433"; ctx.textAlign="center"; ctx.font="bold 22px system-ui";
+  ctx.fillText(eur(total), cx, cy+4);
+  ctx.fillStyle="#6b7385"; ctx.font="13px system-ui"; ctx.fillText("diesen Monat", cx, cy+24);
+  document.getElementById("legend").innerHTML = catArr.map(([k,v],i) =>
+    `<span><i style="background:${COLORS[i%COLORS.length]}"></i>${esc(k)} (${Math.round(v/total*100)} %)</span>`).join("");
+}
+
+function drawBars(catArr, total){
+  const max = catArr.length ? catArr[0][1] : 1;
+  document.getElementById("bars").innerHTML = catArr.length ? catArr.map(([k,v],i) => `
+    <div class="bar-row"><div class="bar-head"><span>${esc(k)}</span><b>${eur(v)}</b></div>
+    <div class="bar"><span style="width:${v/max*100}%;background:${COLORS[i%COLORS.length]}"></span></div></div>`).join("")
+    : `<div class="empty">Keine Daten</div>`;
+}
+
+function drawYear(y, selM){
+  document.getElementById("yearLabel").textContent = `– ${y}`;
+  const c = document.getElementById("yearChart"), ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  const vals = [...Array(12)].map((_,m) => {
+    const d = dueInMonth(y,m);
+    return {fix:d.filter(i=>i.type==="fix").reduce((s,i)=>s+i.amount,0), abo:d.filter(i=>i.type==="abo").reduce((s,i)=>s+i.amount,0)};
+  });
+  const max = Math.max(1, ...vals.map(v => v.fix+v.abo)) * 1.15;
+  const L=60, B=230, T=20, W=c.width-L-20, H=B-T, bw=W/12;
+  ctx.strokeStyle="#e3e7ef"; ctx.fillStyle="#6b7385"; ctx.font="12px system-ui"; ctx.textAlign="right";
+  for(let i=0;i<=4;i++){ const yy=B-H*i/4; ctx.beginPath(); ctx.moveTo(L,yy); ctx.lineTo(L+W,yy); ctx.stroke(); ctx.fillText(Math.round(max*i/4)+" €", L-8, yy+4); }
+  const avg = items.reduce((s,i)=>s+monthly(i),0);
+  vals.forEach((v,m) => {
+    const x = L + m*bw + bw*0.18, w = bw*0.64;
+    const hf = v.fix/max*H, ha = v.abo/max*H;
+    ctx.globalAlpha = m===selM ? 1 : 0.55;
+    ctx.fillStyle="#4f6bed"; ctx.fillRect(x, B-hf, w, hf);
+    ctx.fillStyle="#e8578a"; ctx.fillRect(x, B-hf-ha, w, ha);
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = m===selM ? "#1e2433" : "#6b7385"; ctx.textAlign="center";
+    ctx.font = (m===selM?"bold ":"")+"12px system-ui";
+    ctx.fillText(MONTHS[m].slice(0,3), x+w/2, B+18);
+  });
+  const ay = B - avg/max*H;
+  ctx.setLineDash([6,4]); ctx.strokeStyle="#e6a23c"; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(L,ay); ctx.lineTo(L+W,ay); ctx.stroke(); ctx.setLineDash([]); ctx.lineWidth=1;
+  ctx.fillStyle="#e6a23c"; ctx.textAlign="left"; ctx.font="bold 12px system-ui"; ctx.fillText("Ø "+eur(avg), L+6, ay-6);
+  ctx.fillStyle="#4f6bed"; ctx.fillRect(c.width-210,8,10,10); ctx.fillStyle="#6b7385"; ctx.font="12px system-ui"; ctx.fillText("Fixkosten",c.width-195,17);
+  ctx.fillStyle="#e8578a"; ctx.fillRect(c.width-120,8,10,10); ctx.fillStyle="#6b7385"; ctx.fillText("Abos",c.width-105,17);
+}
+
+/* ---------- Monatlich Sparen ---------- */
+const SAVINGS_KEY = "kostentracker_sparen_v1";
+let savings = JSON.parse(localStorage.getItem(SAVINGS_KEY) || "null") || {income:0, quote:0, goals:[]};
+const saveSavings = () => { localStorage.setItem(SAVINGS_KEY, JSON.stringify(savings)); touch(); };
+const SAVE_CAT = "Bausparen & Sparen";
+const monthsUntil = ymStr => {
+  if(!ymStr) return null;
+  const [y,m] = ymStr.split("-").map(Number), n = new Date();
+  return (y - n.getFullYear())*12 + (m - 1 - n.getMonth());
+};
+const ymLabel = d => `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+// effektive Monatsrate: eingetragen oder aus Zieldatum berechnet
+function goalRate(g){
+  if(g.monthly > 0) return g.monthly;
+  const rest = Math.max(0, g.target - g.saved), mu = monthsUntil(g.date);
+  if(rest <= 0) return 0;
+  if(mu != null) return rest / Math.max(1, mu);
+  return 0;
+}
+
+function loadSavingsInputs(){
+  document.getElementById("sIncome").value = savings.income || "";
+  document.getElementById("sQuote").value = savings.quote || "";
+}
+function updateSavingsSettings(){
+  savings.income = parseFloat(document.getElementById("sIncome").value) || 0;
+  savings.quote = parseFloat(document.getElementById("sQuote").value) || 0;
+  saveSavings(); renderSavings();
+}
+
+function renderSavings(){
+  const income = savings.income || 0;
+  const costItems = items.filter(i => i.category !== SAVE_CAT);
+  const saveItems = items.filter(i => i.category === SAVE_CAT);
+  const costs = costItems.reduce((s,i) => s + monthly(i), 0);
+  const fromCosts = saveItems.reduce((s,i) => s + monthly(i), 0);
+  const fromGoals = savings.goals.filter(g => g.saved < g.target).reduce((s,g) => s + goalRate(g), 0);
+  const totalSave = fromCosts + fromGoals;
+  const rest = income - costs - totalSave;
+
+  // Geldfluss
+  document.getElementById("sFlow").innerHTML = income ? `
+    <div><span>Netto-Einkommen</span><b>${eur(income)}</b></div>
+    <div><span>− Fixkosten & Abos (Ø, ohne Sparposten)</span><b style="color:#c73a5b">−${eur(costs)}</b></div>
+    <div><span>− Sparverträge aus „Meine Kosten“</span><b style="color:var(--save)">−${eur(fromCosts)}</b></div>
+    <div><span>− Sparraten für Sparziele</span><b style="color:var(--save)">−${eur(fromGoals)}</b></div>
+    <div class="total"><span>Frei verfügbar zum Leben</span><span style="color:${rest<0?"#c73a5b":"var(--text)"}">${eur(rest)}</span></div>`
+    : `<div class="empty" style="display:block;border:none">Trag dein Netto-Einkommen ein, um zu sehen, wie viel du monatlich sparen kannst.</div>`;
+
+  // KPIs
+  document.getElementById("sMonthly").textContent = eur(totalSave);
+  document.getElementById("sMonthlySub").textContent = `${eur(fromCosts)} Sparverträge + ${eur(fromGoals)} Sparziele`;
+  document.getElementById("sYear").textContent = eur(totalSave*12);
+  document.getElementById("kpiSave").textContent = eur(totalSave);
+  document.getElementById("kpiSaveYear").textContent = eur(totalSave*12);
+  document.getElementById("kpiSaveSub").textContent = income
+    ? `Sparquote ${(totalSave/income*100).toLocaleString("de-DE",{maximumFractionDigits:1})} % (von ${eur(income*12)} Netto/Jahr)`
+    : (() => { const n = savings.goals.filter(g => g.saved < g.target).length;
+        return n ? `${n} Sparziel${n===1?"":"e"} + Sparverträge` : "aus Sparverträgen · Ziele anlegen ›"; })();
+  const rate = income ? totalSave/income*100 : null;
+  const rEl = document.getElementById("sRate");
+  rEl.textContent = rate==null ? "–" : rate.toLocaleString("de-DE",{maximumFractionDigits:1})+" %";
+  rEl.style.color = rate==null ? "var(--muted)" : (savings.quote && rate < savings.quote ? "var(--warn)" : "var(--save)");
+  document.getElementById("sRateSub").textContent = savings.quote ? `Ziel: ${savings.quote} % (= ${eur(income*savings.quote/100)})` : "vom Netto-Einkommen";
+  const savedSum = savings.goals.reduce((s,g)=>s+g.saved,0), targetSum = savings.goals.reduce((s,g)=>s+g.target,0);
+  document.getElementById("sSaved").textContent = eur(savedSum);
+  document.getElementById("sSavedSub").textContent = targetSum ? `von ${eur(targetSum)} (${Math.round(savedSum/targetSum*100)} %)` : "noch keine Sparziele";
+
+  // Hinweis
+  let h = "";
+  if(!income) h = "💡 Mit deinem Einkommen berechne ich Sparquote und frei verfügbares Geld.";
+  else if(rest < 0) h = `⚠️ Deine geplanten Ausgaben und Sparraten übersteigen dein Einkommen um <b>${eur(-rest)}</b>. Senke Sparraten oder prüfe deine Abos.`;
+  else{
+    h = `👍 Nach Kosten und Sparen bleiben dir <b>${eur(rest)}</b> im Monat (≈ ${eur(rest/30)} pro Tag).`;
+    if(savings.quote){
+      const need = income*savings.quote/100 - totalSave;
+      h += need > 0.005 ? `<br>🎯 Für deine Ziel-Sparquote von ${savings.quote} % fehlen noch <b>${eur(need)}</b> pro Monat.`
+                        : `<br>🎉 Du erreichst deine Ziel-Sparquote von ${savings.quote} %!`;
+    } else {
+      h += `<br>💡 Faustregel 50/30/20: ${eur(income*0.2)} (20 %) sparen wäre ein gutes Ziel.`;
+    }
+  }
+  const aboYear = items.filter(i=>i.type==="abo").reduce((s,i)=>s+monthly(i),0);
+  if(aboYear) h += `<br>📺 Würdest du deine Abos (${eur(aboYear)}/Monat) sparen, hättest du nach einem Jahr <b>${eur(aboYear*12)}</b> mehr.`;
+  document.getElementById("sHint").innerHTML = h;
+
+  // Sparziele
+  const list = document.getElementById("goalList");
+  list.innerHTML = savings.goals.length ? savings.goals.map((g,i) => {
+    const pct = g.target ? Math.min(100, g.saved/g.target*100) : 0;
+    const restG = Math.max(0, g.target - g.saved), r = goalRate(g), done = restG <= 0;
+    let meta = `Noch offen: <b>${eur(restG)}</b> · Sparrate: <b>${eur(r)}</b>/Monat${g.monthly>0?"":(g.date?" (berechnet)":"")}`;
+    if(!done){
+      if(r > 0){
+        const n = Math.ceil(restG / r), d = new Date(); d.setMonth(d.getMonth()+n);
+        meta += `<br>📅 Voraussichtlich erreicht: <b>${ymLabel(d)}</b> (in ${n} Monat${n===1?"":"en"})`;
+      } else meta += `<br>Lege eine Sparrate oder ein Zieldatum fest.`;
+      if(g.date){
+        const mu = Math.max(1, monthsUntil(g.date)), need = restG/mu;
+        const [yy,mm] = g.date.split("-").map(Number);
+        meta += `<br>🎯 Zieldatum ${MONTHS[mm-1]} ${yy}: nötig sind <b>${eur(need)}</b>/Monat ` +
+                (r + 0.005 >= need ? `<span style="color:var(--save)">✔ im Plan</span>` : `<span style="color:#c73a5b">✖ ${eur(need-r)} zu wenig</span>`);
+      }
+    } else meta += `<br>🎉 Ziel erreicht!`;
+    return `<div class="goal ${done?"done":""}">
+      <div class="goal-head">
+        <div><h3>${esc(g.name)}</h3><div class="muted" style="font-size:.85rem">${eur(g.saved)} von ${eur(g.target)} · ${Math.round(pct)} %</div></div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          ${!done && r>0 ? `<button class="btn secondary" style="padding:6px 10px" onclick="depositGoal(${g.id})" title="Monatsrate auf Erspartes buchen">＋ ${eur(r)} eingezahlt</button>` : ""}
+          <button class="icon-btn" title="Betrag einzahlen/abheben" onclick="customDeposit(${g.id})">💶</button>
+          <button class="icon-btn" title="Bearbeiten" onclick="editGoal(${g.id})">✏️</button>
+          <button class="icon-btn" title="Löschen" onclick="deleteGoal(${g.id})">🗑️</button>
+        </div>
+      </div>
+      <div class="bar"><span style="width:${pct}%;background:${done?"var(--save)":COLORS[i%COLORS.length]}"></span></div>
+      <div class="goal-meta">${meta}</div>
+    </div>`;
+  }).join("") : `<div class="empty">Noch keine Sparziele – leg oben dein erstes an (z. B. Notgroschen = 3 Monatsausgaben ≈ ${eur(items.reduce((s,i)=>s+monthly(i),0)*3)}).</div>`;
+
+  // Rechner vorbelegen
+  const cr = document.getElementById("cRate");
+  if(cr.value === "" && document.activeElement !== cr) cr.value = Math.round(totalSave) || 100;
+  renderCalc();
+}
+
+function resetGoalForm(){
+  document.getElementById("goalForm").reset();
+  document.getElementById("gEditId").value = "";
+  document.getElementById("gSaved").value = 0;
+  document.getElementById("gFormTitle").textContent = "🎯 Neues Sparziel anlegen";
+  document.getElementById("gSubmitBtn").textContent = "Sparziel hinzufügen";
+  document.getElementById("gCancelBtn").classList.add("hidden");
+}
+document.getElementById("goalForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const id = document.getElementById("gEditId").value;
+  const data = {
+    name: document.getElementById("gName").value.trim(),
+    target: parseFloat(document.getElementById("gTarget").value) || 0,
+    saved: parseFloat(document.getElementById("gSaved").value) || 0,
+    monthly: parseFloat(document.getElementById("gMonthly").value) || 0,
+    date: document.getElementById("gDate").value || "",
+  };
+  if(!data.monthly && !data.date && !confirm("Ohne Sparrate und Zieldatum kann kein Fortschritt geplant werden. Trotzdem speichern?")) return;
+  if(id){ savings.goals = savings.goals.map(g => g.id == id ? {...g, ...data} : g); }
+  else { savings.goals.push({...data, id: Date.now()}); }
+  saveSavings(); resetGoalForm(); renderSavings();
+});
+function editGoal(id){
+  const g = savings.goals.find(x => x.id == id);
+  document.getElementById("gEditId").value = g.id;
+  document.getElementById("gName").value = g.name;
+  document.getElementById("gTarget").value = g.target;
+  document.getElementById("gSaved").value = g.saved;
+  document.getElementById("gMonthly").value = g.monthly || "";
+  document.getElementById("gDate").value = g.date || "";
+  document.getElementById("gFormTitle").textContent = "✏️ Sparziel bearbeiten";
+  document.getElementById("gSubmitBtn").textContent = "Speichern";
+  document.getElementById("gCancelBtn").classList.remove("hidden");
+  window.scrollTo({top: document.getElementById("goalForm").offsetTop - 80, behavior:"smooth"});
+}
+function deleteGoal(id){
+  const g = savings.goals.find(x => x.id == id);
+  if(confirm(`Sparziel „${g.name}“ wirklich löschen?`)){ savings.goals = savings.goals.filter(x => x.id != id); saveSavings(); renderSavings(); }
+}
+function depositGoal(id){
+  const g = savings.goals.find(x => x.id == id);
+  g.saved = Math.round((g.saved + goalRate(g))*100)/100;
+  saveSavings(); renderSavings();
+}
+function customDeposit(id){
+  const g = savings.goals.find(x => x.id == id);
+  const v = prompt(`Betrag für „${g.name}“ (negativ = abheben):`, goalRate(g).toFixed(2).replace(".",","));
+  if(v === null) return;
+  const n = parseFloat(v.replace(",","."));
+  if(isNaN(n)) return alert("Ungültiger Betrag");
+  g.saved = Math.max(0, Math.round((g.saved + n)*100)/100);
+  saveSavings(); renderSavings();
+}
+
+function renderCalc(){
+  const rate = parseFloat(document.getElementById("cRate").value) || 0;
+  const start = parseFloat(document.getElementById("cStart").value) || 0;
+  const p = (parseFloat(document.getElementById("cInterest").value) || 0)/100/12;
+  const years = Math.min(50, Math.max(1, parseInt(document.getElementById("cYears").value) || 1));
+  const data = []; let bal = start, paid = start;
+  for(let m=1; m<=years*12; m++){
+    bal = bal*(1+p) + rate; paid += rate;
+    if(m % 12 === 0) data.push({paid, bal});
+  }
+  document.getElementById("cEnd").textContent = eur(bal);
+  document.getElementById("cPaid").textContent = eur(paid);
+  document.getElementById("cGain").textContent = eur(bal-paid);
+
+  const c = document.getElementById("calcChart"), ctx = c.getContext("2d");
+  ctx.clearRect(0,0,c.width,c.height);
+  const max = Math.max(1, ...data.map(d=>d.bal))*1.12;
+  const L=80, B=230, T=24, W=c.width-L-20, H=B-T, bw=W/data.length;
+  ctx.strokeStyle="#e3e7ef"; ctx.fillStyle="#6b7385"; ctx.font="12px system-ui"; ctx.textAlign="right";
+  for(let i=0;i<=4;i++){ const yy=B-H*i/4; ctx.beginPath(); ctx.moveTo(L,yy); ctx.lineTo(L+W,yy); ctx.stroke(); ctx.fillText(Math.round(max*i/4).toLocaleString("de-DE")+" €", L-8, yy+4); }
+  const step = Math.ceil(data.length/15);
+  data.forEach((d,i) => {
+    const x = L + i*bw + bw*0.15, w = bw*0.7;
+    const hp = d.paid/max*H, hb = d.bal/max*H;
+    ctx.fillStyle="#2fa36b"; ctx.fillRect(x, B-hp, w, hp);
+    ctx.fillStyle="#e6a23c"; ctx.fillRect(x, B-hb, w, hb-hp);
+    if((i+1)%step===0 || i===data.length-1){ ctx.fillStyle="#6b7385"; ctx.textAlign="center"; ctx.fillText(`${i+1} J.`, x+w/2, B+18); }
+  });
+  ctx.textAlign="left";
+  ctx.fillStyle="#2fa36b"; ctx.fillRect(c.width-230,6,10,10); ctx.fillStyle="#6b7385"; ctx.fillText("Eingezahlt",c.width-215,15);
+  ctx.fillStyle="#e6a23c"; ctx.fillRect(c.width-130,6,10,10); ctx.fillStyle="#6b7385"; ctx.fillText("Zinsen",c.width-115,15);
+}
+
+/* ---------- Tabs ---------- */
+function showTab(t){
+  ["list","report","save","data"].forEach(x => document.getElementById("tab-"+x).classList.toggle("hidden", x!==t));
+  document.querySelectorAll(".tab").forEach(b => b.classList.toggle("active", b.dataset.tab===t));
+  if(t==="report") renderReport();
+  if(t==="save") renderSavings();
+}
+
+/* ---------- Daten ---------- */
+function download(name, content, type){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([content],{type})); a.download = name; a.click();
+}
+function exportJSON(){ download("kostentracker.json", JSON.stringify({items, savings},null,2), "application/json"); }
+function exportCSV(){
+  const rows = [["Bezeichnung","Art","Kategorie","Betrag","Rhythmus","Ø pro Monat","Erste Abbuchung","Tag"]]
+    .concat(items.map(i => [i.name, i.type==="fix"?"Fixkosten":"Abo", i.category, i.amount.toFixed(2).replace(".",","), INTERVAL_TXT[i.interval], monthly(i).toFixed(2).replace(".",","), i.start, i.day]));
+  download("kostentracker.csv", "\uFEFF"+rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(";")).join("\n"), "text/csv");
+}
+function importJSON(e){
+  const f = e.target.files[0]; if(!f) return;
+  f.text().then(t => { try{ const d = JSON.parse(t);
+    if(Array.isArray(d)){ items = d; }
+    else if(d && Array.isArray(d.items)){ items = d.items; if(d.savings && Array.isArray(d.savings.goals)){ savings = d.savings; saveSavings(); } }
+    else throw 0;
+    save(); render(); alert("Import erfolgreich ✅"); }catch{ alert("Ungültige Datei ❌"); } });
+}
+function loadDemo(){ if(confirm("Aktuelle Daten durch Beispieldaten ersetzen?")){ items = demoData(); save(); render(); } }
+function clearAll(){ if(confirm("Wirklich ALLE Daten löschen?")){ items = []; savings = {income:0, quote:0, goals:[]}; save(); saveSavings(); loadSavingsInputs(); render(); } }
+
+/* ---------- In HTML-Datei speichern ---------- */
+let fileHandle = null;
+function buildHtml(now){
+  const payload = JSON.stringify({savedAt: now, items, savings}).replace(/</g, "\\u003c");
+  const i = SOURCE_HTML.indexOf('id="embeddedData"');
+  const start = SOURCE_HTML.indexOf(">", i) + 1, end = SOURCE_HTML.indexOf("<\/script>", start);
+  return SOURCE_HTML.slice(0, start) + payload + SOURCE_HTML.slice(end);
+}
+async function saveToHtml(){
+  const now = Date.now(), html = buildHtml(now);
+  try{
+    if(window.showSaveFilePicker){
+      if(!fileHandle) fileHandle = await showSaveFilePicker({suggestedName:"kostentracker.html", types:[{description:"HTML-Datei", accept:{"text/html":[".html"]}}]});
+      const w = await fileHandle.createWritable(); await w.write(html); await w.close();
+    } else {
+      download("kostentracker.html", html, "text/html");
+    }
+    meta.lastChange = now; meta.lastFileSave = now;
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+    updateSaveStatus();
+  }catch(e){
+    if(e && e.name === "AbortError") return;
+    fileHandle = null;
+    alert("Speichern fehlgeschlagen ❌\n" + (e && e.message ? e.message : e));
+  }
+}
+function updateSaveStatus(){
+  const el = document.getElementById("fileStatus"), dot = document.getElementById("unsavedDot");
+  if(!el || !dot) return;
+  const unsaved = !meta.lastFileSave || (meta.lastChange || 0) > meta.lastFileSave;
+  dot.classList.toggle("hidden", !unsaved);
+  el.innerHTML = meta.lastFileSave
+    ? `Zuletzt in HTML gespeichert: <b>${new Date(meta.lastFileSave).toLocaleString("de-DE")}</b> ` +
+      (unsaved ? `· <span style="color:#c73a5b">ungespeicherte Änderungen</span>` : `· ✅ aktuell`)
+    : `Noch nicht in der HTML-Datei gespeichert.`;
+}
+document.addEventListener("keydown", e => {
+  if((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s"){ e.preventDefault(); saveToHtml(); }
+});
+
+/* ---------- Start ---------- */
+resetForm();
+loadSavingsInputs();
+updateSaveStatus();
+render();
+</script>
+</body>
+</html>
